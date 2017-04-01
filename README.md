@@ -20,8 +20,7 @@ pip install --upgrade --find-links=. .
 **Notes**
 
 - The above as well as all other python3-using commands should also run with v2.7+
-- This module is also available via [Anaconda (conda-forge)](https://anaconda.org/conda-forge/py-lz4framed)
-- PyPI releases are signed with the [Iotic Labs Software release signing key](https://iotic-labs.com/iotic-labs.com.asc)
+- This fork is based on https://github.com/Iotic-Labs/py-lz4framed
 
 # Improvements
 
