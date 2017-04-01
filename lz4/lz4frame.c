@@ -754,8 +754,8 @@ void LZ4F_dump_state(char * buffer, size_t bufsize, LZ4F_dctx* d){
                      "tmpOutBuffer: %p, dict: %p, dictSize: %ld, "
                      "tmpOut: %p, tmpOutSize: %ld, tmpOutStart: %ld|",
              d->version, d->dStage, d->frameRemainingSize, d->maxBlockSize, d->maxBufferSize,
-             d->tmpIn, d->tmpInSize, d->tmpInTarget, d->tmpOutBuffer, d->dict, d->dictSize,
-             d->tmpOut, d->tmpOutSize, d->tmpOutStart
+             (void*)d->tmpIn, d->tmpInSize, d->tmpInTarget, (void*)d->tmpOutBuffer, (void*)d->dict, d->dictSize,
+             (void*)d->tmpOut, d->tmpOutSize, d->tmpOutStart
     );
 }
 
