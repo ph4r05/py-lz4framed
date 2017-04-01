@@ -488,7 +488,7 @@ class TestDecompressor(TestHelperMixin, TestCase):
                 self.assertTrue(len(newctx_str) > 16)
 
                 newctx = unmarshal_decompression_context(newctx_str)
-                decomp.setfp(new_buff)
+                decomp = Decompressor(new_buff)
                 decomp.setctx(newctx)
                 for chunk in decomp:
                     out_bytes.write(chunk)
