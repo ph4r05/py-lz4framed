@@ -805,7 +805,7 @@ LZ4F_errorCode_t LZ4F_decompress_clone_state(LZ4F_dctx** LZ4F_decompressionConte
 
     /* Memory offsets - dict */
     if (d->dict != 0) {
-        if (d->dict - d->tmpOutBuffer < 0){
+        if (d->dict - d->tmpOutBuffer < 0 || d->maxBufferSize < d->dictSize){
             return err0r(LZ4F_ERROR_GENERIC);
         }
         if (d->dict - d->tmpOutBuffer > (d->maxBufferSize - d->dictSize)){
@@ -817,7 +817,7 @@ LZ4F_errorCode_t LZ4F_decompress_clone_state(LZ4F_dctx** LZ4F_decompressionConte
 
     /* Memory offsets - tmpOut */
     if (d->tmpOut != 0) {
-        if (d->tmpOut - d->tmpOutBuffer < 0){
+        if (d->tmpOut - d->tmpOutBuffer < 0 || d->maxBufferSize < d->tmpOutSize){
             return err0r(LZ4F_ERROR_GENERIC);
         }
         if (d->tmpOut - d->tmpOutBuffer > (d->maxBufferSize - d->tmpOutSize)){
@@ -911,7 +911,7 @@ LZ4F_errorCode_t LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr,
 
     /* Memory offsets - dict */
     if (dctxPtr->dict != 0) {
-        if (dctxPtr->dict - dctxPtr->tmpOutBuffer < 0){
+        if (dctxPtr->dict - dctxPtr->tmpOutBuffer < 0 || dctxPtr->maxBufferSize < dctxPtr->dictSize){
             return err0r(LZ4F_ERROR_GENERIC);
         }
         if (dctxPtr->dict - dctxPtr->tmpOutBuffer > (dctxPtr->maxBufferSize - dctxPtr->dictSize)){
@@ -925,7 +925,7 @@ LZ4F_errorCode_t LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr,
 
     /* Memory offsets - tmpOut */
     if (dctxPtr->tmpOut != 0) {
-        if (dctxPtr->tmpOut - dctxPtr->tmpOutBuffer < 0){
+        if (dctxPtr->tmpOut - dctxPtr->tmpOutBuffer < 0 || dctxPtr->maxBufferSize < dctxPtr->tmpOutSize){
             return err0r(LZ4F_ERROR_GENERIC);
         }
         if (dctxPtr->tmpOut - dctxPtr->tmpOutBuffer > (dctxPtr->maxBufferSize - dctxPtr->tmpOutSize)){
@@ -1003,6 +1003,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void * buf
     /* Checksum - unsafe. Should be marshalled properly */
     memcpy(&(nPtr->xxh), &(src->xxh), sizeof(XXH32_state_t));
 
+    /* Not enough input data to deserialize inpBuffer and outBuffer */
     if (buffer_size < sizeof(LZ4F_dctx_tran_s) + nPtr->maxBufferSize + nPtr->maxBlockSize){
         goto bail;
     }
