@@ -814,6 +814,138 @@ bail:
 
 /******************************************************************************/
 
+PyDoc_STRVAR(_lz4framed_clone_decompression_context__doc__,
+"clone_decompression_context() -> PyCapsule\n"
+"\n"
+"Clones decompression context for use in chunked decompression.\n");
+#define FUNC_DEF_CLONE_DCTX {"clone_decompression_context", _lz4framed_clone_decompression_context, \
+                            METH_VARARGS | METH_KEYWORDS, _lz4framed_clone_decompression_context__doc__}
+static PyObject*
+_lz4framed_clone_decompression_context(PyObject *self, PyObject *args, PyObject *kwargs) {
+#if PY_MAJOR_VERSION >= 3
+    static const char *format = "O:clone_decompression_context";
+#else
+    static const char *format = "O:clone_decompression_context";
+#endif
+    static char *keywords[] = {"ctx", NULL};
+
+    _lz4f_dctx_t *dctx = NULL;
+    PyObject *dctx_capsule = NULL;
+    _lz4f_dctx_t *dctx_src = NULL;
+    PyObject *dctx_capsule_src = NULL;
+
+    LZ4FRAMED_LOCK_FLAG;
+    UNUSED(self);
+
+    /* Get source decompression context */
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &dctx_capsule_src)) {
+        goto bail1;
+    }
+    if (!PyCapsule_IsValid(dctx_capsule_src, DECOMPRESSION_CAPSULE_NAME)) {
+        PyErr_SetString(PyExc_ValueError, "ctx invalid");
+        goto bail1;
+    }
+
+    dctx_src = PyCapsule_GetPointer(dctx_capsule_src, DECOMPRESSION_CAPSULE_NAME);
+
+    /* Allocate wrapper & create new */
+    if (NULL == (dctx = PyMem_New(_lz4f_dctx_t, 1))) {
+        PyErr_NoMemory();
+        goto bail1;
+    }
+    dctx->ctx = NULL;
+
+    ENTER_LZ4FRAMED(dctx_src);
+
+#ifdef WITH_THREAD
+    if (NULL == (dctx->lock = PyThread_allocate_lock())) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to allocate lock");
+        goto bail;
+    }
+#endif
+    BAIL_ON_LZ4_ERROR(LZ4F_decompress_clone_state(&(dctx->ctx), dctx_src->ctx));
+    BAIL_ON_NULL(dctx_capsule = PyCapsule_New(dctx, DECOMPRESSION_CAPSULE_NAME, _dctx_capsule_destructor));
+    EXIT_LZ4FRAMED(dctx_src);
+    return dctx_capsule;
+
+bail1:
+    return NULL;
+
+bail:
+    // this must NOT be freed once capsule exists (since destructor responsible for freeing)
+    EXIT_LZ4FRAMED(dctx_src);
+    if (dctx) {
+        LZ4F_freeDecompressionContext(dctx->ctx);
+#ifdef WITH_THREAD
+        if (dctx->lock) {
+            PyThread_free_lock(dctx->lock);
+        }
+#endif
+        PyMem_Del(dctx);
+    }
+    return NULL;
+}
+
+/******************************************************************************/
+PyDoc_STRVAR(_lz4framed_decompress_dump__doc__,
+"decompress_dump(ctx) -> None\n"
+"\n"
+"Decompresses parts of an lz4 frame from data given in *b*, returning the\n"
+"uncompressed result as a list of chunks, with the last element being input_hint\n"
+"(i.e. how many bytes to ideally expect on the next call). Once input_hint is\n"
+"zero, decompression of the whole frame is complete. Note: Some calls to this\n"
+"function may return no chunks if they are incomplete.\n"
+"Args:\n"
+"    ctx: Decompression context\n"
+"    b (bytes): The object containing lz4-framed data to decompress\n"
+"    chunk_len (int): Size of uncompressed chunks in bytes. If not all of the\n"
+"                     data fits in one chunk, multiple will be used. Ideally\n"
+"                     only one chunk is required per call of this method - this can\n"
+"                     be determined from block_size_id via get_frame_info() call."
+"\n"
+"Raises:\n"
+"    Lz4FramedError: If a decompression failure occured");
+#define FUNC_DEF_DECOMPRESS_DUMP {"decompress_dump", (PyCFunction)_lz4framed_decompress_dump,\
+                                    METH_VARARGS | METH_KEYWORDS, _lz4framed_decompress_dump__doc__}
+static PyObject*
+_lz4framed_decompress_dump(PyObject *self, PyObject *args, PyObject *kwargs) {
+    char strbuf[2049] = {0};
+#if PY_MAJOR_VERSION >= 3
+    static const char *format = "O:decompress_dump";
+#else
+    static const char *format = "O:decompress_dump";
+#endif
+    static char *keywords[] = {"ctx", NULL};
+
+    _lz4f_dctx_t *dctx = NULL;
+    PyObject *dctx_capsule;
+
+    LZ4FRAMED_LOCK_FLAG;
+    UNUSED(self);
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &dctx_capsule)) {
+        goto bail;
+    }
+    if (!PyCapsule_IsValid(dctx_capsule, DECOMPRESSION_CAPSULE_NAME)) {
+        PyErr_SetString(PyExc_ValueError, "ctx invalid");
+        goto bail;
+    }
+
+    dctx = PyCapsule_GetPointer(dctx_capsule, DECOMPRESSION_CAPSULE_NAME);
+
+    ENTER_LZ4FRAMED(dctx);
+    LZ4F_dump_state(strbuf, 2048, dctx->ctx);
+    PySys_WriteStderr("StateDump: %s\n", strbuf);
+    EXIT_LZ4FRAMED(dctx);
+
+    Py_RETURN_NONE;
+
+    bail:
+    return NULL;
+}
+
+/******************************************************************************/
+
 PyDoc_STRVAR(_lz4framed_decompress_update__doc__,
 "decompress_update(ctx, b, chunk_len=65536) -> list\n"
 "\n"
@@ -944,7 +1076,7 @@ bail:
 static PyMethodDef Lz4framedMethods[] = {
     FUNC_DEF_GET_BLOCK_SIZE, FUNC_DEF_COMPRESS, FUNC_DEF_DECOMPRESS, FUNC_DEF_CREATE_CCTX, FUNC_DEF_CREATE_DCTX,
     FUNC_DEF_COMPRESS_BEGIN, FUNC_DEF_COMPRESS_UPDATE, FUNC_DEF_COMPRESS_END, FUNC_DEF_GET_FRAME_INFO,
-    FUNC_DEF_DECOMPRESS_UPDATE,
+    FUNC_DEF_DECOMPRESS_UPDATE, FUNC_DEF_DECOMPRESS_DUMP, FUNC_DEF_CLONE_DCTX,
     {NULL, NULL, 0, NULL}
 };
 

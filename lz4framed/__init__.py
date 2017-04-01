@@ -46,7 +46,8 @@ from _lz4framed import (LZ4F_BLOCKSIZE_DEFAULT, LZ4F_BLOCKSIZE_MAX64KB, LZ4F_BLO
                         Lz4FramedError, Lz4FramedNoDataError,
                         compress, decompress,
                         create_compression_context, compress_begin, compress_update, compress_end,
-                        create_decompression_context, get_frame_info, decompress_update,
+                        create_decompression_context, get_frame_info, decompress_update, decompress_dump,
+                        clone_decompression_context,
                         get_block_size)
 
 
@@ -181,6 +182,15 @@ class Decompressor(__Iterable):
             else:
                 self.__read = fp.read
 
+    def setctx(self, ctx):
+        """
+        Updates internal context used for decompression. Used with context cloning & deserialization
+        :param ctx: 
+        :return: 
+        """
+        with self.__lock:
+            self.__ctx = ctx
+
     def _read(self, read, input_hint=15):
         """
         Reads input data, updates number of read bytes, throws Lz4FramedNoDataError if it is 0
@@ -240,3 +250,6 @@ class Decompressor(__Iterable):
         """Returns number of bytes read from the file like object"""
         return self.__data_read
 
+    @property
+    def ctx(self):
+        return self.__ctx

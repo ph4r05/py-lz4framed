@@ -30,8 +30,8 @@ from lz4framed import (LZ4F_BLOCKSIZE_DEFAULT, LZ4F_BLOCKSIZE_MAX64KB, LZ4F_BLOC
                        LZ4F_ERROR_frameType_unknown, Lz4FramedError, Lz4FramedNoDataError,
                        compress, decompress,
                        create_compression_context, compress_begin, compress_update, compress_end,
-                       create_decompression_context, get_frame_info, decompress_update,
-                       get_block_size,
+                       create_decompression_context, get_frame_info, decompress_update, decompress_dump,
+                       get_block_size, clone_decompression_context,
                        Compressor, Decompressor)
 
 PY2 = version_info[0] < 3
@@ -395,44 +395,46 @@ class TestDecompressor(TestHelperMixin, TestCase):
             Decompressor()  # pylint: disable=no-value-for-parameter
         with self.assertRaisesRegex(AttributeError, 'has no attribute \'read\''):
             Decompressor('1')
-
-        # non-callable read attribute
-        class Empty(object):
-            read = 1
-        with self.assertRaises(TypeError):
-            Decompressor(Empty())
-
-    def test_decompressor_fp(self):
-        # levels > 10 (v1.7.5) are significantly slower
+    def test_decompressor_fp_clone(self):
         for level in (0, 10):
-            out_bytes = BytesIO()
-            for chunk in Decompressor(BytesIO(compress(LONG_INPUT, level=level))):
-                out_bytes.write(chunk)
-            self.assertEqual(out_bytes.getvalue(), LONG_INPUT)
+            comp_data = compress(LONG_INPUT, level=level)
+            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
+                      + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
 
-        # incomplete frame
-        out_bytes.truncate()
-        with self.assertRaises(Lz4FramedNoDataError):
-            for chunk in Decompressor(BytesIO(compress(LONG_INPUT)[:-32])):
-                out_bytes.write(chunk)
-        # some data should have been written
-        out_bytes.seek(SEEK_END)
-        self.assertTrue(out_bytes.tell() > 0)
+            for offset in offsets:
+                out_bytes = BytesIO()
+                decomp = Decompressor(BytesIO(comp_data[:-1*offset]))
+                with self.assertRaises(Lz4FramedNoDataError):
+                    for chunk in decomp:
+                        out_bytes.write(chunk)
+
+                # Finish with decompression - new data provided + cloned context
+                new_buff = BytesIO(comp_data[-1*offset:])
+                newctx = clone_decompression_context(decomp.ctx)
+                decomp.setfp(new_buff)
+                decomp.setctx(newctx)
+                for chunk in decomp:
+                    out_bytes.write(chunk)
+
+                self.assertEqual(len(out_bytes.getvalue()), len(LONG_INPUT))
+                self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
 
     def test_decompressor_fp_continuation(self):
         # levels > 10 (v1.7.5) are significantly slower
         for level in (0, 10):
-            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] + [random.randint(1, 2000) for _ in range(5)]
+            comp_data = compress(LONG_INPUT, level=level)
+            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
+                      + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
+
             for offset in offsets:
                 out_bytes = BytesIO()
-                comp_data = compress(LONG_INPUT, level=level)
 
                 decomp = Decompressor(BytesIO(comp_data[:-1*offset]))
                 with self.assertRaises(Lz4FramedNoDataError):
                     for chunk in decomp:
                         out_bytes.write(chunk)
 
-                # Finish with decompression
+                # Finish with decompression - new data provided
                 new_buff = BytesIO(comp_data[-1*offset:])
                 decomp.setfp(new_buff)
 
