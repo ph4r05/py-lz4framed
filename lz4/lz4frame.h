@@ -344,23 +344,23 @@ LZ4FLIB_API void LZ4F_dump_state(char * buffer, size_t bufsize, LZ4F_dctx* dctxP
 */
 LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_clone_state(LZ4F_dctx** LZ4F_decompressionContextPtr, LZ4F_dctx* d);
 
-/*! LZ4F_decompress_marhall_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size) :
-*   Returns size of the buffer required to marshall current decompression state
+/*! LZ4F_decompress_marshal_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size) :
+*   Returns size of the buffer required to marshal current decompression state
 *   @return : if != 0, there was an error.
 */
-LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marhall_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size);
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marshal_state_size(LZ4F_dctx *dctxPtr, size_t *buffer_size);
 
-/*! LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
+/*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
 *   Serializes decompression state to the byte buffer.
 *   @return : if != 0, there was an error.
 */
-LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr, void* buffer, size_t buffer_size);
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr, void *buffer, size_t buffer_size);
 
-/*! LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void * buffer, size_t buffer_size) :
+/*! LZ4F_decompress_unmarshal_state(LZ4F_dctx** dctxPtr, void * buffer, size_t buffer_size) :
 *   Deserializes decompression state from the byte buffer.
 *   @return : if != 0, there was an error.
 */
-LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void* buffer, size_t buffer_size);
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buffer, size_t buffer_size);
 
 #if defined (__cplusplus)
 }

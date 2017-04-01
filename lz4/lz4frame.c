@@ -852,11 +852,11 @@ typedef struct LZ4F_dctx_tran_s {
     BYTE   header[16];
 } LZ4F_dctx_tran_s;  /* typedef'd to LZ4F_dctx in lz4frame.h */
 
-/*! LZ4F_decompress_marhall_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size) :
-*   Returns size of the buffer required to marshall current decompression state
+/*! LZ4F_decompress_masrhal_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size) :
+*   Returns size of the buffer required to marshal current decompression state
 *   @return : if != 0, there was an error.
 */
-LZ4F_errorCode_t LZ4F_decompress_marhall_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size){
+LZ4F_errorCode_t LZ4F_decompress_marshal_state_size(LZ4F_dctx *dctxPtr, size_t *buffer_size){
     if (dctxPtr==NULL) return err0r(LZ4F_ERROR_GENERIC);
     *buffer_size = sizeof(LZ4F_dctx_tran_s) + dctxPtr->maxBlockSize + dctxPtr->maxBufferSize;
 
@@ -865,12 +865,12 @@ LZ4F_errorCode_t LZ4F_decompress_marhall_state_size(LZ4F_dctx* dctxPtr, size_t *
 
 #define LZ4F_INVALID_OFFSET 0xFFFFFFFFULL
 
-/*! LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
+/*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
 *   Serializes decompression state to the byte buffer.
 *   @return : if != 0, there was an error.
 */
-LZ4F_errorCode_t LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr,
-                                               void* buffer, size_t buffer_size){
+LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
+                                               void *buffer, size_t buffer_size){
     LZ4F_dctx_tran_s * dst = NULL;
     BYTE * memOffsetBlob = NULL;
 
@@ -945,11 +945,11 @@ LZ4F_errorCode_t LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr,
     return LZ4F_OK_NoError;
 }
 
-/*! LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void * buffer, size_t buffer_size) :
+/*! LZ4F_decompress_unmarshal_state(LZ4F_dctx** dctxPtr, void * buffer, size_t buffer_size) :
 *   Deserializes decompression state from the byte buffer.
 *   @return : if != 0, there was an error.
 */
-LZ4F_errorCode_t LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void * buffer, size_t buffer_size) {
+LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buffer, size_t buffer_size) {
     LZ4F_dctx_tran_s * src = NULL;
     BYTE * memOffsetBlob = NULL;
     U32 version = 0;
