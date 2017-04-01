@@ -7,3 +7,6 @@ MANIFEST
 *.egg
 .eggs/
 py_lz4framed.egg-info/
+.idea/
+CMake*
+
