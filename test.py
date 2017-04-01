@@ -15,6 +15,9 @@
 
 """Note: These tests are not meant to verify all of lz4's behaviour, only the Python functionality"""
 
+import sys
+import unittest
+import random
 from sys import version_info
 from unittest import TestCase
 from contextlib import contextmanager
@@ -415,3 +418,36 @@ class TestDecompressor(TestHelperMixin, TestCase):
         # some data should have been written
         out_bytes.seek(SEEK_END)
         self.assertTrue(out_bytes.tell() > 0)
+
+    def test_decompressor_fp_continuation(self):
+        # levels > 10 (v1.7.5) are significantly slower
+        for level in (0, 10):
+            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] + [random.randint(1, 2000) for _ in range(5)]
+            for offset in offsets:
+                out_bytes = BytesIO()
+                comp_data = compress(LONG_INPUT, level=level)
+
+                decomp = Decompressor(BytesIO(comp_data[:-1*offset]))
+                with self.assertRaises(Lz4FramedNoDataError):
+                    for chunk in decomp:
+                        out_bytes.write(chunk)
+
+                # Finish with decompression
+                new_buff = BytesIO(comp_data[-1*offset:])
+                decomp.setfp(new_buff)
+
+                for chunk in decomp:
+                    out_bytes.write(chunk)
+
+                self.assertEqual(len(out_bytes.getvalue()), len(LONG_INPUT))
+                self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
+
+
+def run(verbosity=1, repeat=1):
+    print('Python version: %s' % sys.version)
+    unittest.main()
+
+
+if __name__ == '__main__':
+    run()
+

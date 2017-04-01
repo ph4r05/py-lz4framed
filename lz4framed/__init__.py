@@ -160,15 +160,39 @@ class Decompressor(__Iterable):
         Args:
             fp: File like object (supporting read() method) to read compressed data from.
         """
+        self.setfp(fp)
+        self.__info = None
+        self.__ctx = create_decompression_context()
+        self.__lock = Lock()
+        self.__data_read = 0
+
+    def setfp(self, fp):
+        """
+        Sets fp (file-like) object to the decompressor.
+        Enables to update the decompressor source for online streaming decompression (e.g., reconnection)
+        :param x: 
+        :return: 
+        """
         if fp is None:
             raise TypeError('fp')
         elif not callable(fp.read):
             raise TypeError('fp.read not callable')
         else:
             self.__read = fp.read
-        self.__info = None
-        self.__ctx = create_decompression_context()
-        self.__lock = Lock()
+
+    def _read(self, read, input_hint=15):
+        """
+        Reads input data, updates number of read bytes, throws Lz4FramedNoDataError if it is 0
+        :return: 
+        """
+        data = read(input_hint)
+        ln = len(data)
+
+        if ln == 0:
+            raise Lz4FramedNoDataError()
+
+        self.__data_read += ln
+        return data
 
     def __iter__(self):
         ctx = self.__ctx
@@ -177,23 +201,29 @@ class Decompressor(__Iterable):
         chunk_size = 32  # output chunk size, will be increased once block size known
 
         with self.__lock:
-            output = decompress_update(ctx, read(input_hint), chunk_size)
-            try:
-                self.__info = info = get_frame_info(ctx)
-            except Lz4FramedError as ex:
-                if ex.args[1] != LZ4F_ERROR_frameHeader_incomplete:
-                    # should not happen since have read 15 bytes
-                    raise
+            # Read the frame header only once
+            if self.__info is None:
+                output = decompress_update(ctx, self._read(read, input_hint), chunk_size)
+                try:
+                    self.__info = info = get_frame_info(ctx)
+                except Lz4FramedError as ex:
+                    if ex.args[1] != LZ4F_ERROR_frameHeader_incomplete:
+                        # should not happen since have read 15 bytes
+                        raise
+                else:
+                    chunk_size = get_block_size(info['block_size_id'])
+                input_hint = output.pop()
+
+                # return any data as part of header read, if present
+                for element in output:
+                    yield element
+
             else:
-                chunk_size = get_block_size(info['block_size_id'])
-            input_hint = output.pop()
+                chunk_size = get_block_size(self.__info['block_size_id'])
 
-            # return any data as part of header read, if present
-            for element in output:
-                yield element
-
+            # reading blocks data
             while input_hint > 0:
-                output = decompress_update(ctx, read(input_hint), chunk_size)
+                output = decompress_update(ctx, self._read(read, input_hint), chunk_size)
                 input_hint = output.pop()
                 for element in output:
                     yield element
@@ -203,3 +233,9 @@ class Decompressor(__Iterable):
         """See get_frame_info(). Note: This will return None if not enough data has been
            read yet to decode header (typically at least one read from iterator)."""
         return self.__info
+
+    @property
+    def data_read(self):
+        """Returns number of bytes read from the file like object"""
+        return self.__data_read
+
