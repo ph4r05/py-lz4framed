@@ -32,6 +32,7 @@ from lz4framed import (LZ4F_BLOCKSIZE_DEFAULT, LZ4F_BLOCKSIZE_MAX64KB, LZ4F_BLOC
                        create_compression_context, compress_begin, compress_update, compress_end,
                        create_decompression_context, get_frame_info, decompress_update, decompress_dump,
                        get_block_size, clone_decompression_context,
+                       marshal_decompression_context, unmarshal_decompression_context,
                        Compressor, Decompressor)
 
 PY2 = version_info[0] < 3
@@ -411,6 +412,33 @@ class TestDecompressor(TestHelperMixin, TestCase):
                 # Finish with decompression - new data provided + cloned context
                 new_buff = BytesIO(comp_data[-1*offset:])
                 newctx = clone_decompression_context(decomp.ctx)
+                decomp.setfp(new_buff)
+                decomp.setctx(newctx)
+                for chunk in decomp:
+                    out_bytes.write(chunk)
+
+                self.assertEqual(len(out_bytes.getvalue()), len(LONG_INPUT))
+                self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
+
+    def test_decompressor_fp_marshalling(self):
+        for level in (0, 10):
+            comp_data = compress(LONG_INPUT, level=level)
+            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
+                      + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
+
+            for offset in offsets:
+                out_bytes = BytesIO()
+                decomp = Decompressor(BytesIO(comp_data[:-1*offset]))
+                with self.assertRaises(Lz4FramedNoDataError):
+                    for chunk in decomp:
+                        out_bytes.write(chunk)
+
+                # Finish with decompression - new data provided + masrhalled context
+                new_buff = BytesIO(comp_data[-1*offset:])
+                newctx_str = marshal_decompression_context(decomp.ctx)
+                self.assertTrue(len(newctx_str) > 16)
+
+                newctx = unmarshal_decompression_context(newctx_str)
                 decomp.setfp(new_buff)
                 decomp.setctx(newctx)
                 for chunk in decomp:
