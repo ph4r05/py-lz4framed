@@ -1007,7 +1007,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void * buf
     }
 
     /* Memory buffer - output */
-    if (nPtr->tmpOutBuffer != 0) {
+    if (nPtr->maxBufferSize > 0) {
         nPtr->tmpOutBuffer = (BYTE *) ALLOCATOR(nPtr->maxBufferSize);
         if (nPtr->tmpOutBuffer == NULL) {
             goto bail;
