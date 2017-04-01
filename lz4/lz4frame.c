@@ -759,6 +759,17 @@ void LZ4F_dump_state(char * buffer, size_t bufsize, LZ4F_dctx* d){
     );
 }
 
+void LZ4F_print_state(LZ4F_dctx* d){
+    printf("ver: %u, state: %u, frameRemainingSize: %llu, maxBlockSize: %ld, maxBufferSize: %ld, "
+                     "tmpIn: %p, tmpInSize: %ld, tmpInTarget: %ld, "
+                     "tmpOutBuffer: %p, dict: %p, dictSize: %ld, "
+                     "tmpOut: %p, tmpOutSize: %ld, tmpOutStart: %ld\n",
+             d->version, d->dStage, d->frameRemainingSize, d->maxBlockSize, d->maxBufferSize,
+             (void*)d->tmpIn, d->tmpInSize, d->tmpInTarget, (void*)d->tmpOutBuffer, (void*)d->dict, d->dictSize,
+             (void*)d->tmpOut, d->tmpOutSize, d->tmpOutStart
+    );
+}
+
 /*! LZ4F_decompress_clone_state() :
 *   Clones existing decompressionContext object, which tracks all decompression operations
 *   into a new usable decompression context. Context represents the whole decompressor state.
