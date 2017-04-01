@@ -37,14 +37,20 @@ The scenario improvements address is downloading & decompressing large LZ4
 data stream on the fly (hundreds of GBs). If the download stream is interrupted
 the original decompressor had no way to resume the decompression where it stopped.
 
+## Continuation
+
 The main motivation is to recover from these interruptions.
 Decompressor object now supports changing of the file-like object that is read from.
 If input socket stream went down we can re-connect and continue from the 
 position it stopped. More in test `test_decompressor_fp_continuation`.
 
+## State cloning
+
 If the processing logic is more complex you can use `clone_decompression_context`
 to clone decompressor context (the whole decompression state) and revert 
 to this checkpoint if something breaks. More in test `test_decompressor_fp_clone`.
+
+## State marshalling
 
 In order to recover also from program crashes you can marshal / serialize
 the decompressor context to the (byte) string which can be later
