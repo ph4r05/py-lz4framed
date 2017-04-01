@@ -839,6 +839,7 @@ _lz4framed_clone_decompression_context(PyObject *self, PyObject *args, PyObject 
 
     /* Get source decompression context */
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &dctx_capsule_src)) {
+        PyErr_SetString(PyExc_ValueError, "invalid params");
         goto bail1;
     }
     if (!PyCapsule_IsValid(dctx_capsule_src, DECOMPRESSION_CAPSULE_NAME)) {
@@ -890,21 +891,9 @@ bail:
 PyDoc_STRVAR(_lz4framed_decompress_dump__doc__,
 "decompress_dump(ctx) -> None\n"
 "\n"
-"Decompresses parts of an lz4 frame from data given in *b*, returning the\n"
-"uncompressed result as a list of chunks, with the last element being input_hint\n"
-"(i.e. how many bytes to ideally expect on the next call). Once input_hint is\n"
-"zero, decompression of the whole frame is complete. Note: Some calls to this\n"
-"function may return no chunks if they are incomplete.\n"
-"Args:\n"
-"    ctx: Decompression context\n"
-"    b (bytes): The object containing lz4-framed data to decompress\n"
-"    chunk_len (int): Size of uncompressed chunks in bytes. If not all of the\n"
-"                     data fits in one chunk, multiple will be used. Ideally\n"
-"                     only one chunk is required per call of this method - this can\n"
-"                     be determined from block_size_id via get_frame_info() call."
-"\n"
+"Decompresses dumps decompressor context to the stderr\n"
 "Raises:\n"
-"    Lz4FramedError: If a decompression failure occured");
+"    Lz4FramedError: If a decompression state is invalid");
 #define FUNC_DEF_DECOMPRESS_DUMP {"decompress_dump", (PyCFunction)_lz4framed_decompress_dump,\
                                     METH_VARARGS | METH_KEYWORDS, _lz4framed_decompress_dump__doc__}
 static PyObject*
@@ -924,6 +913,7 @@ _lz4framed_decompress_dump(PyObject *self, PyObject *args, PyObject *kwargs) {
     UNUSED(self);
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &dctx_capsule)) {
+        PyErr_SetString(PyExc_ValueError, "invalid params");
         goto bail;
     }
     if (!PyCapsule_IsValid(dctx_capsule, DECOMPRESSION_CAPSULE_NAME)) {
