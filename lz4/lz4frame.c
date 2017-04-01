@@ -871,7 +871,7 @@ LZ4F_errorCode_t LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr,
     }
 
     dst = (LZ4F_dctx_tran_s*) buffer;
-    memOffsetBlob = (BYTE*) buffer + sizeof(LZ4F_dctx_tran_s);
+    memOffsetBlob = ((BYTE*) buffer) + sizeof(LZ4F_dctx_tran_s);
 
     /* Frame header */
     memcpy(&(dst->frameInfo), &(dctxPtr->frameInfo), sizeof(LZ4F_frameInfo_t));
@@ -952,7 +952,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void * buf
     }
 
     src = (LZ4F_dctx_tran_s*) buffer;
-    memOffsetBlob = buffer + sizeof(LZ4F_dctx_tran_s);
+    memOffsetBlob = ((BYTE*) buffer) + sizeof(LZ4F_dctx_tran_s);
 
     /* Unmarshall simple fields */
     version = LZ4F_readLE32(&(src->version));
