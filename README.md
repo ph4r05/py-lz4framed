@@ -23,6 +23,32 @@ pip install --upgrade --find-links=. .
 - This module is also available via [Anaconda (conda-forge)](https://anaconda.org/conda-forge/py-lz4framed)
 - PyPI releases are signed with the [Iotic Labs Software release signing key](https://iotic-labs.com/iotic-labs.com.asc)
 
+# Improvements
+
+This fork has several improvements I needed for my other project.
+
+The scenario improvements address is downloading & decompressing large LZ4
+data stream on the fly (hundreds of GBs). If the download stream is interrupted
+the original decompressor had no way to resume the decompression where it stopped.
+
+The main motivation is to recover from these interruptions.
+Decompressor object now supports changing of the file-like object that is read from.
+If input socket stream went down we can re-connect and continue from the 
+position it stopped. More in test `test_decompressor_fp_continuation`.
+
+If the processing logic is more complex you can use `clone_decompression_context`
+to clone decompressor context (the whole decompression state) and revert 
+to this checkpoint if something breaks. More in test `test_decompressor_fp_clone`.
+
+In order to recover also from program crashes you can marshal / serialize
+the decompressor context to the (byte) string which can be later
+unmarshalled / deserialized and continue from that point. Marshalled state
+can be stored e.g., to a file. More in test `test_decompressor_fp_marshalling`.
+
+Please note marshalled state is not fully portable between systems with
+different endianness & bit width (32 vs. 64). Most of the marshalling
+is already universal, but checksum state is just memcpy-ied. So if you 
+transfer the state to a different machine and checksum is wrong, this might be the case.
 
 # Usage
 Single-function operation:
