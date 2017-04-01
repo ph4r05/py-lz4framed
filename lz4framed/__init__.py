@@ -160,11 +160,11 @@ class Decompressor(__Iterable):
         Args:
             fp: File like object (supporting read() method) to read compressed data from.
         """
-        self.setfp(fp)
         self.__info = None
         self.__ctx = create_decompression_context()
         self.__lock = Lock()
         self.__data_read = 0
+        self.setfp(fp)
 
     def setfp(self, fp):
         """
@@ -173,12 +173,13 @@ class Decompressor(__Iterable):
         :param x: 
         :return: 
         """
-        if fp is None:
-            raise TypeError('fp')
-        elif not callable(fp.read):
-            raise TypeError('fp.read not callable')
-        else:
-            self.__read = fp.read
+        with self.__lock:
+            if fp is None:
+                raise TypeError('fp')
+            elif not callable(fp.read):
+                raise TypeError('fp.read not callable')
+            else:
+                self.__read = fp.read
 
     def _read(self, read, input_hint=15):
         """
