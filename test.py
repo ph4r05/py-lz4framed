@@ -396,8 +396,30 @@ class TestDecompressor(TestHelperMixin, TestCase):
             Decompressor()  # pylint: disable=no-value-for-parameter
         with self.assertRaisesRegex(AttributeError, 'has no attribute \'read\''):
             Decompressor('1')
-    def test_decompressor_fp_clone(self):
 
+        # non-callable read attribute
+        class Empty(object):
+            read = 1
+        with self.assertRaises(TypeError):
+            Decompressor(Empty())
+
+    def test_decompressor_fp(self):
+        # levels > 10 (v1.7.5) are significantly slower
+        for level in (0, 10):
+            out_bytes = BytesIO()
+            for chunk in Decompressor(BytesIO(compress(LONG_INPUT, level=level))):
+                out_bytes.write(chunk)
+            self.assertEqual(out_bytes.getvalue(), LONG_INPUT)
+
+        # incomplete frame
+        out_bytes.truncate()
+        with self.assertRaises(Lz4FramedNoDataError):
+            for chunk in Decompressor(BytesIO(compress(LONG_INPUT)[:-32])):
+                out_bytes.write(chunk)
+        # some data should have been written
+        out_bytes.seek(SEEK_END)
+        self.assertTrue(out_bytes.tell() > 0)
+        
     def test_decompressor_fp_continuation(self):
         # levels > 10 (v1.7.5) are significantly slower
         for level in (0, 10):
