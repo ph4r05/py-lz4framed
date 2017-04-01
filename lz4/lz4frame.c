@@ -726,7 +726,7 @@ size_t LZ4F_compressEnd(LZ4F_cctx* cctxPtr, void* dstBuffer, size_t dstMaxSize, 
 /*-***************************************************
 *   Frame Decompression
 *****************************************************/
-
+#include <stdio.h>
 struct LZ4F_dctx_s {
     LZ4F_frameInfo_t frameInfo;
     U32    version;
@@ -746,6 +746,70 @@ struct LZ4F_dctx_s {
     XXH32_state_t xxh;
     BYTE   header[16];
 };  /* typedef'd to LZ4F_dctx in lz4frame.h */
+
+void LZ4F_dump_state(char * buffer, size_t bufsize, LZ4F_dctx* d){
+    snprintf(buffer, bufsize, "ver: %u, state: %u, frameRemainingSize: %llu, maxBlockSize: %ld, maxBufferSize: %ld, "
+                     "tmpIn: %p, tmpInSize: %ld, tmpInTarget: %ld, "
+                     "tmpOutBuffer: %p, dict: %p, dictSize: %ld, "
+                     "tmpOut: %p, tmpOutSize: %ld, tmpOutStart: %ld|",
+             d->version, d->dStage, d->frameRemainingSize, d->maxBlockSize, d->maxBufferSize,
+             d->tmpIn, d->tmpInSize, d->tmpInTarget, d->tmpOutBuffer, d->dict, d->dictSize,
+             d->tmpOut, d->tmpOutSize, d->tmpOutStart
+    );
+}
+
+LZ4F_errorCode_t LZ4F_decompress_clone_state(LZ4F_dctx** LZ4F_decompressionContextPtr, LZ4F_dctx* d){
+    LZ4F_errorCode_t er = LZ4F_createDecompressionContext(LZ4F_decompressionContextPtr, d->version);
+    LZ4F_dctx * nPtr = NULL;
+
+    if (er != LZ4F_OK_NoError){
+        return er;
+    }
+
+    /* Shallow copy */
+    nPtr = *LZ4F_decompressionContextPtr;
+    memcpy(nPtr, d, sizeof(LZ4F_dctx));
+
+    /* Memory buffer - input */
+    if (nPtr->tmpIn != 0) {
+        nPtr->tmpIn = (BYTE *) ALLOCATOR(nPtr->maxBlockSize);
+        if (nPtr->tmpIn == NULL) return err0r(LZ4F_ERROR_allocation_failed);
+        memcpy(nPtr->tmpIn, d->tmpIn, nPtr->maxBlockSize);
+    }
+
+    /* Memory buffer - output */
+    if (nPtr->tmpOutBuffer != 0) {
+        nPtr->tmpOutBuffer = (BYTE *) ALLOCATOR(nPtr->maxBufferSize);
+        if (nPtr->tmpOutBuffer == NULL) return err0r(LZ4F_ERROR_allocation_failed);
+        memcpy(nPtr->tmpOutBuffer, d->tmpOutBuffer, nPtr->maxBufferSize);
+    }
+
+    /* Memory offsets - dict */
+    if (d->dict != 0) {
+        if (d->dict - d->tmpOutBuffer < 0){
+            return err0r(LZ4F_ERROR_GENERIC);
+        }
+        if (d->dict - d->tmpOutBuffer > (d->maxBufferSize - d->dictSize)){
+            return err0r(LZ4F_ERROR_GENERIC);
+        }
+
+        nPtr->dict = nPtr->tmpOutBuffer + (d->dict - d->tmpOutBuffer);
+    }
+
+    /* Memory offsets - tmpOut */
+    if (d->tmpOut != 0) {
+        if (d->tmpOut - d->tmpOutBuffer < 0){
+            return err0r(LZ4F_ERROR_GENERIC);
+        }
+        if (d->tmpOut - d->tmpOutBuffer > (d->maxBufferSize - d->tmpOutSize)){
+            return err0r(LZ4F_ERROR_GENERIC);
+        }
+
+        nPtr->tmpOut = nPtr->tmpOutBuffer + (d->tmpOut - d->tmpOutBuffer);
+    }
+
+    return LZ4F_OK_NoError;
+}
 
 
 /*! LZ4F_createDecompressionContext() :

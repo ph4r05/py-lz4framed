@@ -331,6 +331,9 @@ LZ4FLIB_API size_t LZ4F_decompress(LZ4F_dctx* dctx,
                                    const void* srcBuffer, size_t* srcSizePtr,
                                    const LZ4F_decompressOptions_t* dOptPtr);
 
+/*======   Decompression - continuation  ======*/
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_clone_state(LZ4F_dctx** LZ4F_decompressionContextPtr, LZ4F_dctx* d);
+LZ4FLIB_API void LZ4F_dump_state(char * buffer, size_t bufsize, LZ4F_dctx* dctxPtr);
 
 
 #if defined (__cplusplus)
