@@ -13,6 +13,9 @@ python3 setup.py build_ext -i
 
 # To build & install globally
 python3 setup.py install
+
+# To install locally with pip
+pip install --upgrade --find-links=. .
 ```
 **Notes**
 
