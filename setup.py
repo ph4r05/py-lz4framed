@@ -34,18 +34,18 @@ else:
     READ_MD = lambda f: convert(f, 'rst')
 
 
-VERSION = '0.9.6'
+VERSION = '0.9.7'
 
 setup(
-    name='py-lz4framed',
+    name='py-lz4framed_ph4',
     version=VERSION,
     description='LZ4Frame library for Python (via C bindings)',
     long_description=READ_MD('README.md'),
     author='Iotic Labs Ltd',
     author_email='info@iotic-labs.com',
-    maintainer='Iotic Labs Ltd',
-    maintainer_email='vilnis.termanis@iotic-labs.com',
-    url='https://github.com/Iotic-Labs/py-lz4framed',
+    maintainer='Dusan Klinec (ph4r05)',
+    maintainer_email='dusan.klinec@gmail.com',
+    url='https://github.com/ph4r05/py-lz4framed',
     license='Apache License 2.0',
     packages=['lz4framed'],
     zip_safe=False,
