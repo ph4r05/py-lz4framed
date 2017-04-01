@@ -27,6 +27,12 @@ pip install --upgrade --find-links=. .
 
 This fork has several improvements I needed for my other project.
 
+* Streamed decompression continuation (on reconnect)
+* Streamed decompression state clone - checkpointing
+* Streamed decompression marshalling - failure recovery
+
+## More on improvements 
+
 The scenario improvements address is downloading & decompressing large LZ4
 data stream on the fly (hundreds of GBs). If the download stream is interrupted
 the original decompressor had no way to resume the decompression where it stopped.
@@ -117,3 +123,10 @@ The only existing lz4-frame interoperable implementation I was aware of at the t
 - Not thread safe
 - Does not release GIL during low level (de)compression operations
 - Did not address the requirements for an external project
+
+# Further reading
+
+* https://github.com/lz4/lz4/wiki/lz4_Frame_format.md
+* https://github.com/lz4/lz4/wiki/lz4_Block_format.md
+* https://ticki.github.io/blog/how-lz4-works/
+* https://fastcompression.blogspot.cz/2011/05/lz4-explained.html
