@@ -6,7 +6,7 @@ This is an [LZ4](http://lz4.org)-frame compression library for Python v3.2+ (and
 # Installing / packaging
 ```shell
 # To get from PyPI
-pip3 install py-lz4framed
+pip3 install py-lz4framed_ph4
 
 # To only build extension modules inline (e.g. in repository)
 python3 setup.py build_ext -i
