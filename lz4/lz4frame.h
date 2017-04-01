@@ -332,9 +332,35 @@ LZ4FLIB_API size_t LZ4F_decompress(LZ4F_dctx* dctx,
                                    const LZ4F_decompressOptions_t* dOptPtr);
 
 /*======   Decompression - continuation  ======*/
-LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_clone_state(LZ4F_dctx** LZ4F_decompressionContextPtr, LZ4F_dctx* d);
+
 LZ4FLIB_API void LZ4F_dump_state(char * buffer, size_t bufsize, LZ4F_dctx* dctxPtr);
 
+/*! LZ4F_decompress_clone_state() :
+*   Clones existing decompressionContext object, which tracks all decompression operations
+*   into a new usable decompression context. Context represents the whole decompressor state.
+*   Provides a pointer to a fully allocated and initialized LZ4F_decompressionContext object.
+*   Object can later be released using LZ4F_freeDecompressionContext().
+*   @return : if != 0, there was an error during context creation.
+*/
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_clone_state(LZ4F_dctx** LZ4F_decompressionContextPtr, LZ4F_dctx* d);
+
+/*! LZ4F_decompress_marhall_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size) :
+*   Returns size of the buffer required to marshall current decompression state
+*   @return : if != 0, there was an error.
+*/
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marhall_state_size(LZ4F_dctx* dctxPtr, size_t * buffer_size);
+
+/*! LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
+*   Serializes decompression state to the byte buffer.
+*   @return : if != 0, there was an error.
+*/
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marhall_state(LZ4F_dctx* dctxPtr, void* buffer, size_t buffer_size);
+
+/*! LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void * buffer, size_t buffer_size) :
+*   Deserializes decompression state from the byte buffer.
+*   @return : if != 0, there was an error.
+*/
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_unmarhall_state(LZ4F_dctx** dctxPtr, void* buffer, size_t buffer_size);
 
 #if defined (__cplusplus)
 }
