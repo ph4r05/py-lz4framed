@@ -944,6 +944,7 @@ _lz4framed_marshal_decompression_context(PyObject *self, PyObject *args, PyObjec
     BAIL_ON_LZ4_ERROR(LZ4F_decompress_marshal_state(dctx_src->ctx, marshal_buffer, buffer_size));
     BAIL_ON_NULL(marshalled_string = PyString_FromStringAndSize(marshal_buffer, (Py_ssize_t)buffer_size));
     EXIT_LZ4FRAMED(dctx_src);
+    PyMem_Free(marshal_buffer);
 
     return marshalled_string;
 
