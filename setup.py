@@ -34,7 +34,7 @@ else:
     READ_MD = lambda f: convert(f, 'rst')
 
 
-VERSION = '0.9.9'
+VERSION = '0.9.10'
 
 setup(
     name='py-lz4framed_ph4',
