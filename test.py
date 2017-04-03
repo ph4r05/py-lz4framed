@@ -471,7 +471,7 @@ class TestDecompressor(TestHelperMixin, TestCase):
 
     def test_decompressor_fp_marshalling(self):
         for level in (0, 10):
-            comp_data = compress(LONG_INPUT, level=level)
+            comp_data = compress(LONG_INPUT, level=level, checksum=1)
             offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
                       + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
 

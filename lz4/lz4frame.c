@@ -863,6 +863,86 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state_size(LZ4F_dctx *dctxPtr, size_t *
     return LZ4F_OK_NoError;
 }
 
+/*! LZ4F_marshal_checksum_state_size() :
+*   Returns size of the buffer required to marshal checksum state
+*   @return : if != 0, there was an error.
+*/
+LZ4F_errorCode_t LZ4F_marshal_checksum_state_size(size_t *buffer_size){
+    *buffer_size = sizeof(XXH32_state_t);
+    return LZ4F_OK_NoError;
+}
+
+/*! LZ4F_marshal_checksum_state(XXH32_state_t * checksum_state, void * buffer, size_t buffer_size) :
+*   Portably marshals checksum state to the given buffer
+*   @return : if != 0, there was an error.
+*/
+LZ4F_errorCode_t LZ4F_marshal_checksum_state(XXH32_state_t * checksum_state, void * buffer, size_t buffer_size){
+    if (buffer_size < sizeof(XXH32_state_t)) return err0r(LZ4F_ERROR_GENERIC);
+    BYTE * cbuff = (BYTE*) buffer;
+
+#define LZ4_WRITE32_AND_BUFF(x) LZ4F_writeLE32(cbuff, (U32)(checksum_state->x));   cbuff += 4
+    LZ4_WRITE32_AND_BUFF(total_len_32);
+    LZ4_WRITE32_AND_BUFF(large_len);
+    LZ4_WRITE32_AND_BUFF(v1);
+    LZ4_WRITE32_AND_BUFF(v2);
+    LZ4_WRITE32_AND_BUFF(v3);
+    LZ4_WRITE32_AND_BUFF(v4);
+    LZ4_WRITE32_AND_BUFF(mem32[0]);
+    LZ4_WRITE32_AND_BUFF(mem32[1]);
+    LZ4_WRITE32_AND_BUFF(mem32[2]);
+    LZ4_WRITE32_AND_BUFF(mem32[3]);
+    LZ4_WRITE32_AND_BUFF(memsize);
+#undef LZ4_WRITE32_AND_BUFF
+    return LZ4F_OK_NoError;
+}
+
+/*! LZ4F_unmarshal_checksum_state(XXH32_state_t * checksum_state, void * buffer, size_t buffer_size) :
+*   Portably unmarshals checksum state from the given buffer
+*   @return : if != 0, there was an error.
+*/
+LZ4F_errorCode_t LZ4F_unmarshal_checksum_state(XXH32_state_t * checksum_state, void * buffer, size_t buffer_size){
+    if (buffer_size < sizeof(XXH32_state_t)) return err0r(LZ4F_ERROR_GENERIC);
+    BYTE * cbuff = (BYTE*) buffer;
+
+#define LZ4_READ32_AND_BUFF(x) checksum_state->x = (unsigned)LZ4F_readLE32(cbuff);   cbuff += 4
+    LZ4_READ32_AND_BUFF(total_len_32);
+    LZ4_READ32_AND_BUFF(large_len);
+    LZ4_READ32_AND_BUFF(v1);
+    LZ4_READ32_AND_BUFF(v2);
+    LZ4_READ32_AND_BUFF(v3);
+    LZ4_READ32_AND_BUFF(v4);
+    LZ4_READ32_AND_BUFF(mem32[0]);
+    LZ4_READ32_AND_BUFF(mem32[1]);
+    LZ4_READ32_AND_BUFF(mem32[2]);
+    LZ4_READ32_AND_BUFF(mem32[3]);
+    LZ4_READ32_AND_BUFF(memsize);
+#undef LZ4_READ32_AND_BUFF
+    return LZ4F_OK_NoError;
+}
+
+/*! LZ4F_decompress_marshal_checksum_state(XXH32_state_t * checksum_state, void * buffer, size_t buffer_size) :
+*   Portably marshals checksum state from the decompress state to the given buffer
+*   @return : if != 0, there was an error.
+*/
+LZ4F_errorCode_t LZ4F_decompress_marshal_checksum_state(LZ4F_dctx *dctxPtr,
+                                                        void * buffer, size_t buffer_size) {
+    if (buffer_size < sizeof(XXH32_state_t)) return err0r(LZ4F_ERROR_GENERIC);
+    if (dctxPtr == NULL) return err0r(LZ4F_ERROR_GENERIC);
+    return LZ4F_marshal_checksum_state(&(dctxPtr->xxh), buffer, buffer_size);
+}
+
+/*! LZ4F_decompress_unmarshal_checksum_state(XXH32_state_t * checksum_state, void * buffer, size_t buffer_size) :
+*   Portably unmarshals checksum state of the decompress state from the given buffer
+*   @return : if != 0, there was an error.
+*/
+LZ4F_errorCode_t LZ4F_decompress_unmarshal_checksum_state(LZ4F_dctx *dctxPtr,
+                                                          void * buffer, size_t buffer_size) {
+    if (buffer_size < sizeof(XXH32_state_t)) return err0r(LZ4F_ERROR_GENERIC);
+    if (dctxPtr == NULL) return err0r(LZ4F_ERROR_GENERIC);
+    return LZ4F_unmarshal_checksum_state(&(dctxPtr->xxh), buffer, buffer_size);
+}
+
+
 #define LZ4F_INVALID_OFFSET 0xFFFFFFFFULL
 
 /*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
@@ -873,6 +953,7 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
                                                void *buffer, size_t buffer_size){
     LZ4F_dctx_tran_s * dst = NULL;
     BYTE * memOffsetBlob = NULL;
+    LZ4F_errorCode_t err;
 
     /* Destination buffer size check */
     if (buffer_size < sizeof(LZ4F_dctx_tran_s) + dctxPtr->maxBlockSize + dctxPtr->maxBufferSize
@@ -906,8 +987,11 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
     /* Header in the raw form */
     memcpy(dst->header, dctxPtr->header, sizeof(BYTE) * 16);
 
-    /* Checksum - unsafe. Should be marshalled properly */
-    memcpy(&(dst->xxh), &(dctxPtr->xxh), sizeof(XXH32_state_t));
+    /* Checksum */
+    err = LZ4F_marshal_checksum_state(&(dctxPtr->xxh), (void*) &(dst->xxh), sizeof(XXH32_state_t));
+    if (err != LZ4F_OK_NoError){
+        return err;
+    }
 
     /* Memory offsets - dict */
     if (dctxPtr->dict != 0) {
@@ -957,6 +1041,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
     LZ4F_dctx *nPtr = NULL;
     U64 dictOffset = LZ4F_INVALID_OFFSET;
     U64 tmpOutOffset = LZ4F_INVALID_OFFSET;
+    LZ4F_errorCode_t err;
 
     if (buffer_size < sizeof(LZ4F_dctx_tran_s)){
         return err0r(LZ4F_ERROR_GENERIC);
@@ -1000,8 +1085,11 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
     /* Header in the raw form */
     memcpy(nPtr->header, src->header, sizeof(BYTE) * 16);
 
-    /* Checksum - unsafe. Should be marshalled properly */
-    memcpy(&(nPtr->xxh), &(src->xxh), sizeof(XXH32_state_t));
+    /* Checksum */
+    err = LZ4F_unmarshal_checksum_state(&(nPtr->xxh), (void*)&(src->xxh), sizeof(XXH32_state_t));
+    if (err != LZ4F_OK_NoError){
+        goto bail;
+    }
 
     /* Not enough input data to deserialize inpBuffer and outBuffer */
     if (buffer_size < sizeof(LZ4F_dctx_tran_s) + nPtr->maxBufferSize + nPtr->maxBlockSize){

@@ -56,11 +56,6 @@ the decompressor context to the (byte) string which can be later
 unmarshalled / deserialized and continue from that point. Marshalled state
 can be stored e.g., to a file. More in test `test_decompressor_fp_marshalling`.
 
-Please note marshalled state is not fully portable between systems with
-different endianness & bit width (32 vs. 64). Most of the marshalling
-is already universal, but checksum state is just memcpy-ied. So if you 
-transfer the state to a different machine and checksum is wrong, this might be the case.
-
 # Usage
 Single-function operation:
 ```python
