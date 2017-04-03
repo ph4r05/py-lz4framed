@@ -904,6 +904,12 @@ LZ4F_errorCode_t LZ4F_unmarshal_checksum_state(XXH32_state_t * checksum_state, v
     if (buffer_size < sizeof(XXH32_state_t)) return err0r(LZ4F_ERROR_GENERIC);
     BYTE * cbuff = (BYTE*) buffer;
 
+    // If memsize is too large it will cause segmentation fault in xxhash code.
+    U32 memsize = (unsigned)LZ4F_readLE32(cbuff + sizeof(U32)*10);
+    if (memsize > 4*sizeof(U32)){
+        return err0r(LZ4F_ERROR_GENERIC);
+    }
+
 #define LZ4_READ32_AND_BUFF(x) checksum_state->x = (unsigned)LZ4F_readLE32(cbuff);   cbuff += 4
     LZ4_READ32_AND_BUFF(total_len_32);
     LZ4_READ32_AND_BUFF(large_len);
