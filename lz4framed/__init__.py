@@ -49,6 +49,7 @@ from _lz4framed import (LZ4F_BLOCKSIZE_DEFAULT, LZ4F_BLOCKSIZE_MAX64KB, LZ4F_BLO
                         create_decompression_context, get_frame_info, decompress_update, decompress_dump,
                         clone_decompression_context,
                         marshal_decompression_context, unmarshal_decompression_context,
+                        marshal_decompression_checksum_context, unmarshal_decompression_checksum_context,
                         get_block_size)
 
 

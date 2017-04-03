@@ -33,6 +33,7 @@ from lz4framed import (LZ4F_BLOCKSIZE_DEFAULT, LZ4F_BLOCKSIZE_MAX64KB, LZ4F_BLOC
                        create_decompression_context, get_frame_info, decompress_update, decompress_dump,
                        get_block_size, clone_decompression_context,
                        marshal_decompression_context, unmarshal_decompression_context,
+                       marshal_decompression_checksum_context, unmarshal_decompression_checksum_context,
                        Compressor, Decompressor)
 
 PY2 = version_info[0] < 3
@@ -495,6 +496,61 @@ class TestDecompressor(TestHelperMixin, TestCase):
 
                 self.assertEqual(len(out_bytes.getvalue()), len(LONG_INPUT))
                 self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
+
+
+    def test_decompressor_fp_checksum(self):
+        # levels > 10 (v1.7.5) are significantly slower
+        for level in (0, 10):
+            comp_data = compress(LONG_INPUT, level=level, checksum=1)
+            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
+                      + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
+
+            for offset in offsets:
+                out_bytes = BytesIO()
+
+                decomp = Decompressor(BytesIO(comp_data[:-1*offset]))
+                with self.assertRaises(Lz4FramedNoDataError):
+                    for chunk in decomp:
+                        out_bytes.write(chunk)
+
+                # Finish with decompression - new data provided, context
+                new_buff = BytesIO(comp_data[-1*offset:])
+                decomp.setfp(new_buff)
+
+                ctxt = decomp.ctx
+                ctxt_clone = clone_decompression_context(ctxt)
+
+                chctx = marshal_decompression_checksum_context(decomp.ctx)
+                chctx_len = len(chctx)
+                self.assertTrue(chctx_len > 8)
+
+                # Unmarshall checksum context, finish
+                unmarshal_decompression_checksum_context(ctxt, chctx)
+                decomp.setctx(ctxt)
+                for chunk in decomp:
+                    out_bytes.write(chunk)
+
+                # Data has to be correct also
+                self.assertEqual(len(out_bytes.getvalue()), len(LONG_INPUT))
+                self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
+
+                # Invalid checksum context unmarshalling
+                with self.assertRaises(Lz4FramedError):
+                    unmarshal_decompression_checksum_context(ctxt_clone, 'x' * chctx_len)
+
+                # Almost correct checksum context, but invalid result
+                unmarshal_decompression_checksum_context(ctxt_clone, chctx[:8] + '00' + chctx[10:])
+
+                # Finish with almost correct checksum - should fail
+                new_buff = BytesIO(comp_data[-1*offset:])
+                decomp.setfp(new_buff)
+                decomp.setctx(ctxt_clone)
+                try:
+                    for chunk in decomp:
+                        out_bytes.write(chunk)
+                    self.assertTrue(False, "Should have throw invalid checksum")
+                except Lz4FramedError as e:
+                    self.assertEqual(e[1], LZ4F_ERROR_contentChecksum_invalid)
 
 
 def run(verbosity=1, repeat=1):

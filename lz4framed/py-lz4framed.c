@@ -1032,6 +1032,136 @@ bail:
 }
 
 /******************************************************************************/
+
+PyDoc_STRVAR(_lz4framed_marshal_decompression_checksum_context__doc__,
+"marshal_decompression_checksum_context(ctx) -> string\n"
+"\n"
+"Marshalls / serializes decompression checksum context to the string so\n"
+"it can be unmarshalled later. ");
+#define FUNC_DEF_MARSHAL_CHECKSUM_DCTX {"marshal_decompression_checksum_context", \
+                            _lz4framed_marshal_decompression_checksum_context, \
+                            METH_VARARGS | METH_KEYWORDS, _lz4framed_marshal_decompression_checksum_context__doc__}
+static PyObject*
+_lz4framed_marshal_decompression_checksum_context(PyObject *self, PyObject *args, PyObject *kwargs) {
+#if PY_MAJOR_VERSION >= 3
+    static const char *format = "O:marshal_decompression_checksum_context";
+#else
+    static const char *format = "O:marshal_decompression_checksum_context";
+#endif
+    static char *keywords[] = {"ctx", NULL};
+
+    _lz4f_dctx_t *dctx_src = NULL;
+    PyObject *dctx_capsule_src = NULL;
+
+    size_t buffer_size = 0;
+    char * marshal_buffer = NULL;
+    LZ4F_errorCode_t er = 0;
+    PyObject * marshalled_string = NULL;
+
+    LZ4FRAMED_LOCK_FLAG;
+    UNUSED(self);
+
+    /* Get source decompression context */
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &dctx_capsule_src)) {
+        PyErr_SetString(PyExc_ValueError, "invalid params");
+        goto bail1;
+    }
+    if (!PyCapsule_IsValid(dctx_capsule_src, DECOMPRESSION_CAPSULE_NAME)) {
+        PyErr_SetString(PyExc_ValueError, "ctx invalid");
+        goto bail1;
+    }
+
+    dctx_src = PyCapsule_GetPointer(dctx_capsule_src, DECOMPRESSION_CAPSULE_NAME);
+    ENTER_LZ4FRAMED(dctx_src);
+
+    er = LZ4F_marshal_checksum_state_size(&buffer_size);
+    if (er != LZ4F_OK_NoError){
+        PyErr_SetString(PyExc_ValueError, "error in buffer size computation for checksum");
+        goto bail;
+    }
+
+    /* Allocate byte buffer */
+    if (NULL == (marshal_buffer = PyMem_Malloc(buffer_size))) {
+        PyErr_NoMemory();
+        goto bail;
+    }
+
+    BAIL_ON_LZ4_ERROR(LZ4F_decompress_marshal_checksum_state(dctx_src->ctx, marshal_buffer, buffer_size));
+    BAIL_ON_NULL(marshalled_string = PyString_FromStringAndSize(marshal_buffer, (Py_ssize_t)buffer_size));
+    EXIT_LZ4FRAMED(dctx_src);
+    PyMem_Free(marshal_buffer);
+
+    return marshalled_string;
+
+bail1:
+    return NULL;
+
+bail:
+    // this must NOT be freed once capsule exists (since destructor responsible for freeing)
+    EXIT_LZ4FRAMED(dctx_src);
+    if (marshal_buffer){
+        PyMem_Free(marshal_buffer);
+    }
+    if (marshalled_string){
+        Py_XDECREF(marshalled_string);
+    }
+
+    return NULL;
+}
+
+/******************************************************************************/
+
+PyDoc_STRVAR(_lz4framed_unmarshal_decompression_checksum_context__doc__,
+"unmarshal_decompression_checksum_context(ctx, string) -> None\n"
+"\n"
+"Deserializes decompression checksum context to the given context\n");
+#define FUNC_DEF_UNMARSHAL_CHECKSUM_DCTX {"unmarshal_decompression_checksum_context", \
+                            _lz4framed_unmarshal_decompression_checksum_context, \
+                            METH_VARARGS | METH_KEYWORDS, _lz4framed_unmarshal_decompression_checksum_context__doc__}
+static PyObject*
+_lz4framed_unmarshal_decompression_checksum_context(PyObject *self, PyObject *args, PyObject *kwargs) {
+#if PY_MAJOR_VERSION >= 3
+    static const char *format = "Os#:unmarshal_decompression_checksum_context";
+#else
+    static const char *format = "Os#:unmarshal_decompression_checksum_context";
+#endif
+    static char *keywords[] = {"ctx", "checksum", NULL};
+
+    _lz4f_dctx_t *dctx_src = NULL;
+    PyObject *dctx_capsule_src = NULL;
+
+    Py_ssize_t buffer_size = 0;
+    const char * input_buffer;
+
+    LZ4FRAMED_LOCK_FLAG;
+    UNUSED(self);
+
+    /* Get source decompression context */
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &dctx_capsule_src, &input_buffer, &buffer_size)) {
+        PyErr_SetString(PyExc_ValueError, "invalid params");
+        goto bail1;
+    }
+    if (!PyCapsule_IsValid(dctx_capsule_src, DECOMPRESSION_CAPSULE_NAME)) {
+        PyErr_SetString(PyExc_ValueError, "ctx invalid");
+        goto bail1;
+    }
+
+    dctx_src = PyCapsule_GetPointer(dctx_capsule_src, DECOMPRESSION_CAPSULE_NAME);
+    ENTER_LZ4FRAMED(dctx_src);
+    BAIL_ON_LZ4_ERROR(LZ4F_decompress_unmarshal_checksum_state(dctx_src->ctx,
+                                                               (void*) input_buffer, (size_t)buffer_size));
+    EXIT_LZ4FRAMED(dctx_src);
+    Py_RETURN_NONE;
+
+bail1:
+    return NULL;
+
+bail:
+    EXIT_LZ4FRAMED(dctx_src);
+    return NULL;
+}
+
+/******************************************************************************/
 PyDoc_STRVAR(_lz4framed_decompress_dump__doc__,
 "decompress_dump(ctx) -> None\n"
 "\n"
@@ -1212,6 +1342,7 @@ static PyMethodDef Lz4framedMethods[] = {
     FUNC_DEF_COMPRESS_BEGIN, FUNC_DEF_COMPRESS_UPDATE, FUNC_DEF_COMPRESS_END, FUNC_DEF_GET_FRAME_INFO,
     FUNC_DEF_DECOMPRESS_UPDATE, FUNC_DEF_DECOMPRESS_DUMP, FUNC_DEF_CLONE_DCTX,
     FUNC_DEF_MARSHAL_DCTX, FUNC_DEF_UNMARSHAL_DCTX,
+    FUNC_DEF_MARSHAL_CHECKSUM_DCTX, FUNC_DEF_UNMARSHAL_CHECKSUM_DCTX,
     {NULL, NULL, 0, NULL}
 };
 
