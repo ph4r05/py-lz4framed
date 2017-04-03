@@ -891,7 +891,7 @@ LZ4F_errorCode_t LZ4F_marshal_checksum_state(XXH32_state_t * checksum_state, voi
     LZ4_WRITE32_AND_BUFF(mem32[1]);
     LZ4_WRITE32_AND_BUFF(mem32[2]);
     LZ4_WRITE32_AND_BUFF(mem32[3]);
-    LZ4_WRITE32_AND_BUFF(memsize);
+    LZ4_WRITE32_AND_BUFF(memsize)-4;
 #undef LZ4_WRITE32_AND_BUFF
     return LZ4F_OK_NoError;
 }
@@ -915,7 +915,7 @@ LZ4F_errorCode_t LZ4F_unmarshal_checksum_state(XXH32_state_t * checksum_state, v
     LZ4_READ32_AND_BUFF(mem32[1]);
     LZ4_READ32_AND_BUFF(mem32[2]);
     LZ4_READ32_AND_BUFF(mem32[3]);
-    LZ4_READ32_AND_BUFF(memsize);
+    LZ4_READ32_AND_BUFF(memsize)-4;
 #undef LZ4_READ32_AND_BUFF
     return LZ4F_OK_NoError;
 }
