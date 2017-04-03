@@ -166,6 +166,10 @@ class Decompressor(__Iterable):
         self.__ctx = create_decompression_context()
         self.__lock = Lock()
         self.__data_read = 0
+        self.__next_data_block = 0
+        self.__last_read_aligned = False
+        self.__last_hint = 0
+        self.__first15 = None
         self.setfp(fp)
 
     def setfp(self, fp):
@@ -199,6 +203,8 @@ class Decompressor(__Iterable):
         """
         data = read(input_hint)
         ln = len(data)
+        self.__last_read_aligned = ln == input_hint
+        self.__last_hint = input_hint
 
         if ln == 0:
             raise Lz4FramedNoDataError()
@@ -215,9 +221,11 @@ class Decompressor(__Iterable):
         with self.__lock:
             # Read the frame header only once
             if self.__info is None:
-                output = decompress_update(ctx, self._read(read, input_hint), chunk_size)
+                cur_data = self._read(read, input_hint)
+                output = decompress_update(ctx, cur_data, chunk_size)
                 try:
                     self.__info = info = get_frame_info(ctx)
+                    self.__first15 = cur_data
                 except Lz4FramedError as ex:
                     if ex.args[1] != LZ4F_ERROR_frameHeader_incomplete:
                         # should not happen since have read 15 bytes
@@ -225,6 +233,7 @@ class Decompressor(__Iterable):
                 else:
                     chunk_size = get_block_size(info['block_size_id'])
                 input_hint = output.pop()
+                self.__next_data_block = self.__data_read + input_hint
 
                 # return any data as part of header read, if present
                 for element in output:
@@ -237,6 +246,7 @@ class Decompressor(__Iterable):
             while input_hint > 0:
                 output = decompress_update(ctx, self._read(read, input_hint), chunk_size)
                 input_hint = output.pop()
+                self.__next_data_block = self.__data_read + input_hint
                 for element in output:
                     yield element
 
@@ -250,6 +260,42 @@ class Decompressor(__Iterable):
     def data_read(self):
         """Returns number of bytes read from the file like object"""
         return self.__data_read
+
+    @property
+    def next_data_block(self):
+        """
+        Returns position from the beginning of the file the next data block starts.
+        data..... | BH-4B | datablock-data
+                          |
+                          +- here. 
+        The position can be used for random file access if it is not linked. 
+        In case of seeking/skipping the checksum won't match as we would need to store also checksum state
+        at those positions.
+        """
+        return self.__next_data_block
+
+    @property
+    def last_read_aligned(self):
+        """
+        Returns true if the last read was exactly the size of the hint.
+        If yes, the data probably ended on data... | BH-4B | <- here. 
+        In that case is the amount of currently read data valid offset of the data block boundary.   
+        """
+        return self.__last_read_aligned
+
+    @property
+    def last_hint(self):
+        """
+        Returns the last hint used for the last read.   
+        """
+        return self.__last_hint
+
+    @property
+    def first15(self):
+        """
+        Returns the first 15 bytes of the data stream which contains the frame header
+        """
+        return self.__first15
 
     @property
     def ctx(self):
