@@ -1731,7 +1731,7 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
     }
 
     /* If out buffer is simple, do it simple */
-    if (dctxPtr->tmpOutStart == 0 && dctxPtr->tmpOut == dctxPtr->tmpOutBuffer) {
+    if (dctxPtr->tmpOutStart == 0) {
         if (dctxPtr->tmpOutSize > 0 && dctxPtr->tmpOut != NULL) {
             memcpy(memOffsetBlob, dctxPtr->tmpOut, dctxPtr->tmpOutSize);
             memOffsetBlob += dctxPtr->tmpOutSize;
@@ -1840,7 +1840,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
         }
 
         /* Simpler unmarshalling */
-        if (nPtr->tmpOutStart == 0 && tmpOutOffset == 0){
+        if (nPtr->tmpOutStart == 0){
             if (nPtr->tmpOutSize > 0){
                 memcpy(nPtr->tmpOutBuffer + tmpOutOffset, memOffsetBlob, nPtr->tmpOutSize);
                 memOffsetBlob += nPtr->tmpOutSize;
