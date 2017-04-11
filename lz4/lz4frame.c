@@ -1874,5 +1874,6 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
 
     bail:
     LZ4F_freeDecompressionContext(nPtr);
+    *dctxPtr = NULL;
     return err0r(LZ4F_ERROR_GENERIC);
 }
