@@ -1412,7 +1412,7 @@ size_t LZ4F_decompress(LZ4F_dctx* dctxPtr,
     return nextSrcSizeHint;
 }
 
-/**
+/***********************************************************************************************************************
  * Continuation functions
 */
 
