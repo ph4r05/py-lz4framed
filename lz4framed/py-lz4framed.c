@@ -818,7 +818,7 @@ PyDoc_STRVAR(_lz4framed_clone_decompression_context__doc__,
 "clone_decompression_context() -> PyCapsule\n"
 "\n"
 "Clones decompression context for use in chunked decompression.\n");
-#define FUNC_DEF_CLONE_DCTX {"clone_decompression_context", _lz4framed_clone_decompression_context, \
+#define FUNC_DEF_CLONE_DCTX {"clone_decompression_context", (PyCFunction)_lz4framed_clone_decompression_context, \
                             METH_VARARGS | METH_KEYWORDS, _lz4framed_clone_decompression_context__doc__}
 static PyObject*
 _lz4framed_clone_decompression_context(PyObject *self, PyObject *args, PyObject *kwargs) {
@@ -894,7 +894,7 @@ PyDoc_STRVAR(_lz4framed_marshal_decompression_context__doc__,
 "\n"
 "Marshalls / serializes decompression context to the string so\n"
 "it can be unmarshalled later. ");
-#define FUNC_DEF_MARSHAL_DCTX {"marshal_decompression_context", _lz4framed_marshal_decompression_context, \
+#define FUNC_DEF_MARSHAL_DCTX {"marshal_decompression_context", (PyCFunction)_lz4framed_marshal_decompression_context, \
                             METH_VARARGS | METH_KEYWORDS, _lz4framed_marshal_decompression_context__doc__}
 static PyObject*
 _lz4framed_marshal_decompression_context(PyObject *self, PyObject *args, PyObject *kwargs) {
@@ -971,7 +971,8 @@ PyDoc_STRVAR(_lz4framed_unmarshal_decompression_context__doc__,
 "\n"
 "Deserializes decompression context for use in chunked decompression from\n"
 "the previously marshalled context given as string\n");
-#define FUNC_DEF_UNMARSHAL_DCTX {"unmarshal_decompression_context", _lz4framed_unmarshal_decompression_context, \
+#define FUNC_DEF_UNMARSHAL_DCTX {"unmarshal_decompression_context", \
+                            (PyCFunction)_lz4framed_unmarshal_decompression_context, \
                             METH_VARARGS | METH_KEYWORDS, _lz4framed_unmarshal_decompression_context__doc__}
 static PyObject*
 _lz4framed_unmarshal_decompression_context(PyObject *self, PyObject *args, PyObject *kwargs) {
@@ -1039,7 +1040,7 @@ PyDoc_STRVAR(_lz4framed_marshal_decompression_checksum_context__doc__,
 "Marshalls / serializes decompression checksum context to the string so\n"
 "it can be unmarshalled later. ");
 #define FUNC_DEF_MARSHAL_CHECKSUM_DCTX {"marshal_decompression_checksum_context", \
-                            _lz4framed_marshal_decompression_checksum_context, \
+                            (PyCFunction)_lz4framed_marshal_decompression_checksum_context, \
                             METH_VARARGS | METH_KEYWORDS, _lz4framed_marshal_decompression_checksum_context__doc__}
 static PyObject*
 _lz4framed_marshal_decompression_checksum_context(PyObject *self, PyObject *args, PyObject *kwargs) {
@@ -1116,7 +1117,7 @@ PyDoc_STRVAR(_lz4framed_unmarshal_decompression_checksum_context__doc__,
 "\n"
 "Deserializes decompression checksum context to the given context\n");
 #define FUNC_DEF_UNMARSHAL_CHECKSUM_DCTX {"unmarshal_decompression_checksum_context", \
-                            _lz4framed_unmarshal_decompression_checksum_context, \
+                            (PyCFunction)_lz4framed_unmarshal_decompression_checksum_context, \
                             METH_VARARGS | METH_KEYWORDS, _lz4framed_unmarshal_decompression_checksum_context__doc__}
 static PyObject*
 _lz4framed_unmarshal_decompression_checksum_context(PyObject *self, PyObject *args, PyObject *kwargs) {
