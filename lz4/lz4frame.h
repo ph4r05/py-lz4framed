@@ -333,6 +333,7 @@ LZ4FLIB_API size_t LZ4F_decompress(LZ4F_dctx* dctx,
 
 /*======   Decompression - continuation  ======*/
 
+LZ4FLIB_API void LZ4F_print_state(LZ4F_dctx* d);
 LZ4FLIB_API void LZ4F_dump_state(char * buffer, size_t bufsize, LZ4F_dctx* dctxPtr);
 
 /*! LZ4F_decompress_clone_state() :
