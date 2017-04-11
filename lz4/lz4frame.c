@@ -1724,11 +1724,28 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
         LZ4F_writeLE64(&(dst->tmpOutOffset), LZ4F_INVALID_OFFSET);
     }
 
-    /* Memory blob with the buffer itself */
-    memcpy(memOffsetBlob, dctxPtr->tmpIn, dctxPtr->maxBlockSize);
+    /* More intelligent state marshalling - store only used memory. tmpInSize, tmpOutSize, dictSize */
+    if (dctxPtr->tmpInSize > 0 && dctxPtr->tmpIn != NULL){
+        memcpy(memOffsetBlob, dctxPtr->tmpIn, dctxPtr->tmpInSize);
+        memOffsetBlob += dctxPtr->tmpInSize;
+    }
 
-    /* Memory buffer - output */
-    memcpy(memOffsetBlob + dctxPtr->maxBlockSize, dctxPtr->tmpOutBuffer, dctxPtr->maxBufferSize);
+    /* If out buffer is simple, do it simple */
+    if (dctxPtr->tmpOutStart == 0 && dctxPtr->tmpOut == dctxPtr->tmpOutBuffer) {
+        if (dctxPtr->tmpOutSize > 0 && dctxPtr->tmpOut != NULL) {
+            memcpy(memOffsetBlob, dctxPtr->tmpOut, dctxPtr->tmpOutSize);
+            memOffsetBlob += dctxPtr->tmpOutSize;
+        }
+
+        if (dctxPtr->dictSize > 0 && dctxPtr->dict != NULL) {
+            memcpy(memOffsetBlob, dctxPtr->dict, dctxPtr->dictSize);
+            memOffsetBlob += dctxPtr->dictSize;
+        }
+    } else {
+        /* Memory buffer - output */
+        memcpy(memOffsetBlob, dctxPtr->tmpOutBuffer, dctxPtr->maxBufferSize);
+    }
+
     return LZ4F_OK_NoError;
 }
 
@@ -1806,8 +1823,14 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
             goto bail;
         }
 
-        memcpy(nPtr->tmpIn, memOffsetBlob, nPtr->maxBlockSize);
+        if (nPtr->tmpInSize > 0) {
+            memcpy(nPtr->tmpIn, memOffsetBlob, nPtr->tmpInSize);
+            memOffsetBlob += nPtr->tmpInSize;
+        }
     }
+
+    dictOffset = LZ4F_readLE64(&(src->dictOffset));
+    tmpOutOffset = LZ4F_readLE64(&(src->tmpOutOffset));
 
     /* Memory buffer - output */
     if (nPtr->maxBufferSize > 0) {
@@ -1815,11 +1838,23 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
         if (nPtr->tmpOutBuffer == NULL) {
             goto bail;
         }
-        memcpy(nPtr->tmpOutBuffer, memOffsetBlob + nPtr->maxBlockSize, nPtr->maxBufferSize);
-    }
 
-    dictOffset = LZ4F_readLE64(&(src->dictOffset));
-    tmpOutOffset = LZ4F_readLE64(&(src->tmpOutOffset));
+        /* Simpler unmarshalling */
+        if (nPtr->tmpOutStart == 0 && tmpOutOffset == 0){
+            if (nPtr->tmpOutSize > 0){
+                memcpy(nPtr->tmpOutBuffer + tmpOutOffset, memOffsetBlob, nPtr->tmpOutSize);
+                memOffsetBlob += nPtr->tmpOutSize;
+            }
+
+            if (nPtr->dictSize > 0 && dictOffset != LZ4F_INVALID_OFFSET){
+                memcpy(nPtr->tmpOutBuffer + dictOffset, memOffsetBlob, nPtr->dictSize);
+                memOffsetBlob += nPtr->dictSize;
+            }
+
+        } else {
+            memcpy(nPtr->tmpOutBuffer, memOffsetBlob, nPtr->maxBufferSize);
+        }
+    }
 
     if (dictOffset != LZ4F_INVALID_OFFSET){
         if (dictOffset + nPtr->dictSize > nPtr->maxBufferSize){
