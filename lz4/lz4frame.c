@@ -1728,14 +1728,14 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
         LZ4F_writeLE64(&(dst->tmpOutOffset), LZ4F_INVALID_OFFSET);
     }
 
-    /* More intelligent state marshalling - store only used memory. tmpInSize, tmpOutSize, dictSize */
+    /* More intelligent state marshalling - store used memory only. tmpInSize, tmpOutSize, dictSize */
     if (dctxPtr->tmpInSize > 0 && dctxPtr->tmpIn != NULL){
         memcpy(memOffsetBlob, dctxPtr->tmpIn, dctxPtr->tmpInSize);
         memOffsetBlob += dctxPtr->tmpInSize;
         *buffer_size += dctxPtr->tmpInSize;
     }
 
-    /* If out buffer is simple, do it simple */
+    /* If out buffer has a simple structure, do it in a simple way */
     if (dctxPtr->tmpOutStart == 0) {
         if (dctxPtr->tmpOutSize > 0 && dctxPtr->tmpOut != NULL) {
             memcpy(memOffsetBlob, dctxPtr->tmpOut, dctxPtr->tmpOutSize);
@@ -1749,7 +1749,7 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
             *buffer_size += dctxPtr->dictSize;
         }
     } else {
-        /* Memory buffer - output */
+        /* Memory buffer has more complicated structure, store it all */
         memcpy(memOffsetBlob, dctxPtr->tmpOutBuffer, dctxPtr->maxBufferSize);
     }
 
@@ -1843,7 +1843,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
             goto bail;
         }
 
-        /* Simpler unmarshalling */
+        /* Simpler unmarshalling - used memory only. */
         if (nPtr->tmpOutStart == 0){
             if (nPtr->tmpOutSize > 0){
                 memcpy(nPtr->tmpOutBuffer + tmpOutOffset, memOffsetBlob, nPtr->tmpOutSize);
