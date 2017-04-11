@@ -350,7 +350,7 @@ _lz4framed_decompress(PyObject *self, PyObject *args, PyObject *kwargs) {
     input_pos += input_read;
     input_remaining = input_read = input_remaining - input_read;
     if (frame_info.contentSize) {
-        output_len = frame_info.contentSize;
+        output_len = (size_t)frame_info.contentSize;
         // Prevent LZ4 from buffering output - works if uncompressed size known since output does not have to be resized
         opt.stableDst = 1;
     } else {
