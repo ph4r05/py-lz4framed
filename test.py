@@ -423,9 +423,12 @@ class TestDecompressor(TestHelperMixin, TestCase):
         self.assertTrue(out_bytes.tell() > 0)
         
     def test_decompressor_fp_continuation(self):
-        # levels > 10 (v1.7.5) are significantly slower
-        for level in (0, 10):
-            comp_data = compress(LONG_INPUT, level=level)
+        linked_modes = [True, False]
+        checksum_modes = [True, False]
+        levels = [0, 10]
+
+        for is_linked, has_checksum, level in itertools.product(linked_modes, checksum_modes, levels):
+            comp_data = compress(LONG_INPUT, level=level, checksum=has_checksum, block_mode_linked=is_linked)
             offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
                       + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
 
@@ -448,8 +451,12 @@ class TestDecompressor(TestHelperMixin, TestCase):
                 self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
 
     def test_decompressor_fp_clone(self):
-        for level in (0, 10):
-            comp_data = compress(LONG_INPUT, level=level)
+        linked_modes = [True, False]
+        checksum_modes = [True, False]
+        levels = [0, 10]
+
+        for is_linked, has_checksum, level in itertools.product(linked_modes, checksum_modes, levels):
+            comp_data = compress(LONG_INPUT, level=level, checksum=has_checksum, block_mode_linked=is_linked)
             offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
                       + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
 
@@ -535,8 +542,12 @@ class TestDecompressor(TestHelperMixin, TestCase):
 
     def test_decompressor_fp_checksum(self):
         # levels > 10 (v1.7.5) are significantly slower
-        for level in (0, 10):
-            comp_data = compress(LONG_INPUT, level=level, checksum=1)
+        linked_modes = [True, False]
+        checksum_modes = [True, False]
+        levels = [0, 10]
+
+        for is_linked, has_checksum, level in itertools.product(linked_modes, checksum_modes, levels):
+            comp_data = compress(LONG_INPUT, level=level, checksum=has_checksum, block_mode_linked=is_linked)
             offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
                       + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
 
@@ -583,7 +594,8 @@ class TestDecompressor(TestHelperMixin, TestCase):
                 try:
                     for chunk in decomp:
                         out_bytes.write(chunk)
-                    self.assertTrue(False, "Should have throw invalid checksum")
+                    if has_checksum:
+                        self.assertTrue(False, "Should have throw invalid checksum")
                 except Lz4FramedError as e:
                     self.assertEqual(e[1], LZ4F_ERROR_contentChecksum_invalid)
 
