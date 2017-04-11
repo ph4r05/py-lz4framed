@@ -1648,18 +1648,20 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_checksum_state(LZ4F_dctx *dctxPtr,
 
 #define LZ4F_INVALID_OFFSET 0xFFFFFFFFULL
 
-/*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
-*   Serializes decompression state to the byte buffer.
+/*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t * buffer_size) :
+*   Serializes decompression state to the byte buffer. buffer_size contains the size of the buffer used.
 *   @return : if != 0, there was an error.
 */
 LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
-                                               void *buffer, size_t buffer_size){
+                                               void *buffer, size_t * buffer_size){
     LZ4F_dctx_tran_s * dst = NULL;
     BYTE * memOffsetBlob = NULL;
     LZ4F_errorCode_t err;
+    size_t buffer_size_orig = *buffer_size;
+    *buffer_size = 0;
 
     /* Destination buffer size check */
-    if (buffer_size < sizeof(LZ4F_dctx_tran_s) + dctxPtr->maxBlockSize + dctxPtr->maxBufferSize
+    if (buffer_size_orig < sizeof(LZ4F_dctx_tran_s) + dctxPtr->maxBlockSize + dctxPtr->maxBufferSize
         || (dctxPtr->tmpIn == 0 && dctxPtr->maxBlockSize != 0)
         || (dctxPtr->tmpOutBuffer == 0 && dctxPtr->maxBufferSize != 0)){
         return err0r(LZ4F_ERROR_GENERIC);
@@ -1696,6 +1698,8 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
         return err;
     }
 
+    *buffer_size = sizeof(LZ4F_dctx_tran_s);
+
     /* Memory offsets - dict */
     if (dctxPtr->dict != 0) {
         if (dctxPtr->dict - dctxPtr->tmpOutBuffer < 0 || dctxPtr->maxBufferSize < dctxPtr->dictSize){
@@ -1728,6 +1732,7 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
     if (dctxPtr->tmpInSize > 0 && dctxPtr->tmpIn != NULL){
         memcpy(memOffsetBlob, dctxPtr->tmpIn, dctxPtr->tmpInSize);
         memOffsetBlob += dctxPtr->tmpInSize;
+        *buffer_size += dctxPtr->tmpInSize;
     }
 
     /* If out buffer is simple, do it simple */
@@ -1735,11 +1740,13 @@ LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr,
         if (dctxPtr->tmpOutSize > 0 && dctxPtr->tmpOut != NULL) {
             memcpy(memOffsetBlob, dctxPtr->tmpOut, dctxPtr->tmpOutSize);
             memOffsetBlob += dctxPtr->tmpOutSize;
+            *buffer_size += dctxPtr->tmpOutSize;
         }
 
         if (dctxPtr->dictSize > 0 && dctxPtr->dict != NULL) {
             memcpy(memOffsetBlob, dctxPtr->dict, dctxPtr->dictSize);
             memOffsetBlob += dctxPtr->dictSize;
+            *buffer_size += dctxPtr->dictSize;
         }
     } else {
         /* Memory buffer - output */
@@ -1778,10 +1785,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
     }
 
     nPtr = *dctxPtr;
-    nPtr->dict = NULL;
-    nPtr->tmpOutBuffer = NULL;
-    nPtr->tmpOut = NULL;
-    nPtr->tmpIn = NULL;
+    memset(nPtr, 0, sizeof(LZ4F_dctx_tran_s));
 
     /* Frame header */
     memcpy(&(nPtr->frameInfo), &(src->frameInfo), sizeof(LZ4F_frameInfo_t));
@@ -1812,7 +1816,7 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
     }
 
     /* Not enough input data to deserialize inpBuffer and outBuffer */
-    if (buffer_size < sizeof(LZ4F_dctx_tran_s) + nPtr->maxBufferSize + nPtr->maxBlockSize){
+    if (buffer_size < sizeof(LZ4F_dctx_tran_s) + nPtr->tmpInSize + nPtr->tmpOutSize + nPtr->dictSize){
         goto bail;
     }
 
@@ -1851,8 +1855,10 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
                 memOffsetBlob += nPtr->dictSize;
             }
 
-        } else {
+        } else if (buffer_size >= sizeof(LZ4F_dctx_tran_s) + nPtr->tmpInSize + nPtr->maxBufferSize) {
             memcpy(nPtr->tmpOutBuffer, memOffsetBlob, nPtr->maxBufferSize);
+        } else {
+            goto bail;
         }
     }
 

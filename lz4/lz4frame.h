@@ -385,11 +385,11 @@ LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marshal_state_size(LZ4F_dctx *dctxP
 */
 LZ4FLIB_API LZ4F_errorCode_t LZ4F_marshal_checksum_state_size(size_t *buffer_size);
 
-/*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t buffer_size) :
-*   Serializes decompression state to the byte buffer.
+/*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t * buffer_size) :
+*   Serializes decompression state to the byte buffer. buffer_size contains the size of the buffer used.
 *   @return : if != 0, there was an error.
 */
-LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr, void *buffer, size_t buffer_size);
+LZ4FLIB_API LZ4F_errorCode_t LZ4F_decompress_marshal_state(LZ4F_dctx *dctxPtr, void *buffer, size_t * buffer_size);
 
 /*! LZ4F_decompress_unmarshal_state(LZ4F_dctx** dctxPtr, void * buffer, size_t buffer_size) :
 *   Deserializes decompression state from the byte buffer.
