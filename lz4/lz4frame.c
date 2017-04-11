@@ -1648,6 +1648,21 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_checksum_state(LZ4F_dctx *dctxPtr,
 
 #define LZ4F_INVALID_OFFSET 0xFFFFFFFFULL
 
+/*! simple helper returning 1 if intervals overlap somehow
+*/
+static int interval_overlap(U64 a_beg, U64 a_end, U64 b_beg, U64 b_end){
+    // AAA BBB
+    if (a_beg <= a_end && a_end <= b_beg && a_end <= b_end) {
+        return 0;
+    }
+    // BBB AAA
+    if (b_beg <= b_end && b_end <= a_beg && b_end <= a_end) {
+        return 0;
+    }
+
+    return 1;
+}
+
 /*! LZ4F_decompress_marshal_state(LZ4F_dctx* dctxPtr, void * buffer, size_t * buffer_size) :
 *   Serializes decompression state to the byte buffer. buffer_size contains the size of the buffer used.
 *   @return : if != 0, there was an error.
@@ -1836,6 +1851,23 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
     dictOffset = LZ4F_readLE64(&(src->dictOffset));
     tmpOutOffset = LZ4F_readLE64(&(src->tmpOutOffset));
 
+    /* Offsets sanity checking */
+    if (   (dictOffset != LZ4F_INVALID_OFFSET && dictOffset + nPtr->dictSize > nPtr->maxBufferSize)
+        || (dictOffset == LZ4F_INVALID_OFFSET && nPtr->dictSize != 0)){
+        goto bail;
+    }
+    if (   (tmpOutOffset != LZ4F_INVALID_OFFSET && tmpOutOffset + nPtr->tmpOutSize > nPtr->maxBufferSize)
+        || (tmpOutOffset == LZ4F_INVALID_OFFSET && nPtr->tmpOutSize != 0)){
+        goto bail;
+    }
+
+    /* Overlap is not allowed */
+    if (tmpOutOffset != LZ4F_INVALID_OFFSET && dictOffset != LZ4F_INVALID_OFFSET
+        && nPtr->dictSize > 0 && nPtr->tmpOutSize > 0 && nPtr->tmpOutStart == 0
+        && interval_overlap(dictOffset, dictOffset + nPtr->dictSize, tmpOutOffset, tmpOutOffset + nPtr->tmpOutSize)){
+        goto bail;
+    }
+
     /* Memory buffer - output */
     if (nPtr->maxBufferSize > 0) {
         nPtr->tmpOutBuffer = (BYTE *) ALLOCATOR(nPtr->maxBufferSize);
@@ -1850,30 +1882,26 @@ LZ4F_errorCode_t LZ4F_decompress_unmarshal_state(LZ4F_dctx **dctxPtr, void *buff
                 memOffsetBlob += nPtr->tmpOutSize;
             }
 
-            if (nPtr->dictSize > 0 && dictOffset != LZ4F_INVALID_OFFSET){
+            if (nPtr->dictSize > 0){
                 memcpy(nPtr->tmpOutBuffer + dictOffset, memOffsetBlob, nPtr->dictSize);
                 memOffsetBlob += nPtr->dictSize;
             }
 
         } else if (buffer_size >= sizeof(LZ4F_dctx_tran_s) + nPtr->tmpInSize + nPtr->maxBufferSize) {
             memcpy(nPtr->tmpOutBuffer, memOffsetBlob, nPtr->maxBufferSize);
+
         } else {
             goto bail;
         }
-    }
 
-    if (dictOffset != LZ4F_INVALID_OFFSET){
-        if (dictOffset + nPtr->dictSize > nPtr->maxBufferSize){
-            goto bail;
+        /* Setup the memory pointers to the output buffer according to the offsets created in marshall phase */
+        if (dictOffset != LZ4F_INVALID_OFFSET){
+            nPtr->dict = nPtr->tmpOutBuffer + dictOffset;
         }
-        nPtr->dict = nPtr->tmpOutBuffer + dictOffset;
-    }
 
-    if (tmpOutOffset != LZ4F_INVALID_OFFSET){
-        if (tmpOutOffset + nPtr->tmpOutSize > nPtr->maxBufferSize){
-            goto bail;
+        if (tmpOutOffset != LZ4F_INVALID_OFFSET){
+            nPtr->tmpOut = nPtr->tmpOutBuffer + tmpOutOffset;
         }
-        nPtr->tmpOut = nPtr->tmpOutBuffer + tmpOutOffset;
     }
 
     return LZ4F_OK_NoError;
