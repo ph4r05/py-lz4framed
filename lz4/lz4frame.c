@@ -1168,6 +1168,7 @@ size_t LZ4F_decompress(LZ4F_dctx* dctxPtr,
                 if (dstPtr==dstEnd) {
                     nextSrcSizeHint = nextCBlockSize + BHSize;
                     doAnotherStage = 0;
+                    dctxPtr->tmpInSize = 0;  /* improvement for state checkpointing, no need to remember, obsolete buffer */
                 }
                 break;
             }
