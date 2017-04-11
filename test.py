@@ -18,6 +18,7 @@
 import sys
 import unittest
 import random
+import itertools
 from sys import version_info
 from unittest import TestCase
 from contextlib import contextmanager
@@ -471,11 +472,16 @@ class TestDecompressor(TestHelperMixin, TestCase):
                 self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
 
     def test_decompressor_fp_marshalling(self):
-        for level in (0, 10):
-            comp_data = compress(LONG_INPUT, level=level, checksum=1)
-            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
-                      + [random.randint(1, len(comp_data) - 64) for _ in range(10)]
+        linked_modes = [True, False]
+        checksum_modes = [True, False]
+        levels = [0, 10]
 
+        for is_linked, has_checksum, level in itertools.product(linked_modes, checksum_modes, levels):
+            comp_data = compress(LONG_INPUT, level=level, checksum=has_checksum, block_mode_linked=is_linked)
+            offsets = [1, 11, 15, 16, 31, 32, 33, 63, 64, 65, 1023, 1025] \
+                      + [random.randint(1, len(comp_data) - 64) for _ in range(50)]
+
+            # Random offset break
             for offset in offsets:
                 out_bytes = BytesIO()
                 decomp = Decompressor(BytesIO(comp_data[:-1*offset]))
@@ -497,6 +503,35 @@ class TestDecompressor(TestHelperMixin, TestCase):
                 self.assertEqual(len(out_bytes.getvalue()), len(LONG_INPUT))
                 self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
 
+            # Block boundary break - should be nicely separated, with the small state
+            blocks_break = [1, 2, 3, 30] + [random.randint(3, 30) for _ in range(20)]
+            for block_break in blocks_break:
+                out_bytes = BytesIO()
+                decomp = Decompressor(BytesIO(comp_data))
+                newctx_str = None
+                cur_block = 0
+
+                for chunk in decomp:
+                    out_bytes.write(chunk)
+                    if cur_block == block_break:
+                        newctx_str = marshal_decompression_context(decomp.ctx)
+                        self.assertTrue(len(newctx_str) > 16)
+
+                        if not is_linked:
+                            self.assertTrue(len(newctx_str) < 256)
+
+                        break
+
+                    cur_block += 1
+
+                # Finish from the position we stopped, with unmarshalled context
+                newctx = unmarshal_decompression_context(newctx_str)
+                decomp.setctx(newctx)
+                for chunk in decomp:
+                    out_bytes.write(chunk)
+
+                self.assertEqual(len(out_bytes.getvalue()), len(LONG_INPUT))
+                self.assertTrue(out_bytes.getvalue() == LONG_INPUT)
 
     def test_decompressor_fp_checksum(self):
         # levels > 10 (v1.7.5) are significantly slower
